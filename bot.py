@@ -13,8 +13,10 @@ from telegram.ext import (
 import dotenv
 
 from api import Loader
-from helper import load_user_data, save_user_data, letters, letters_uk_en, letters_en, letters_en_uk, fix_text
+from helper import load_user_data, save_user_data, letters, letters_uk_en, letters_en, letters_en_uk, fix_text, subjects_uk_en
 
+
+SUBJECT_ENTRY, SUBJECT_CHOICE = range(2)
 
 dotenv.load_dotenv()
 token = os.getenv("TELEGRAM_API_TOKEN")
@@ -33,7 +35,8 @@ async def start(update: Update, context: CallbackContext):
 
 async def question(update: Update, context: CallbackContext):
     user_id = str(update.message.from_user.id)
-    section = "ukrainian"
+    user_data = load_user_data()
+    section = user_data[user_id]["current_subject"]
 
     loader = Loader()
     question = loader.random_question(user_id, section)
@@ -91,11 +94,42 @@ async def answer(update: Update, context: CallbackContext):
             parse_mode="html"
         )
 
+async def subject_entry(update: Update, context: CallbackContext):
+    await update.message.reply_text(
+        "Оберіть предмет:",
+        reply_markup=ReplyKeyboardMarkup([["Історія України", "Математика", "Українська Мова"], ["Фізика", "Хімія", "Біологія"], ["Географія", "Українська Літуратура", "Англійська"]], resize_keyboard=True, one_time_keyboard=True)
+    )
+
+    return SUBJECT_CHOICE
+
+async def subject_choice(update: Update, context: CallbackContext):
+    user_id = str(update.message.from_user.id)
+    user_data = load_user_data()
+    subject = subjects_uk_en[update.message.text.lower().replace(" ", "_")]
+    user_data[user_id]["current_subject"] = subject
+    save_user_data(user_data)
+
+    await update.message.reply_text(
+        "Добре, тепер питання будуть з предмету " + update.message.text,
+        reply_markup=ReplyKeyboardMarkup([["/question"]], resize_keyboard=True, one_time_keyboard=True)
+    )
+
+    return ConversationHandler.END
+
 def main():
     app = ApplicationBuilder().token(token).build()
 
+    subject_handler = ConversationHandler(
+        entry_points=[CommandHandler("subject", subject_entry)],
+        states={
+            SUBJECT_CHOICE: [MessageHandler(filters.TEXT, subject_choice)]
+        },
+        fallbacks=[]
+    )
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("question", question))
+    app.add_handler(subject_handler)
     app.add_handler(CallbackQueryHandler(answer))
 
     app.run_polling(poll_interval=1)

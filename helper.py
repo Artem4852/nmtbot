@@ -27,6 +27,18 @@ letters_en_uk = {
 }
 letters_en = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
+subjects_uk_en = {
+    "українська_мова": "ukrainian",
+    "математика": "math",
+    "фізика": "physics",
+    "хімія": "chemistry",
+    "біологія": "biology",
+    "географія": "geography",
+    "українська_література": "ukrainian_literature",
+    "англійська": "english",
+    "історія_україни": "history",
+}
+
 def load_user_data():
     with open("user_data.json", "r") as file:
         return json.load(file)

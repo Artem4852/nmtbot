@@ -2,6 +2,7 @@ import requests, json, os, dotenv, random
 from bs4 import BeautifulSoup
 
 from helper import load_user_data, save_user_data
+from login import update_ost
 
 dotenv.load_dotenv()
 
@@ -49,7 +50,14 @@ class Loader():
     def load_questions_api_raw(self, section):
         self.payload["section"] = sections[section]
         r = self.session.post(self.url, data=self.payload, cookies=self.cookies)
-        return r.json()["questions"]
+        data = r.json()
+        if 'error' in data and data['error'] == "Лише для користувачів!":
+            ost = update_ost()
+            dotenv.load_dotenv()
+            self.cookies['ost'] = ost
+            return self.load_questions_api_raw(section)
+        else:
+            return r.json()["questions"]
     
     def load_questions_api(self, section):
         questions = self.load_questions_api_raw(section)
@@ -78,7 +86,7 @@ class Loader():
                 clean_question["img"] = img_path
 
             if question["ans1"] != "":
-                print(question["ans1"])
+                # print(question["ans1"])
                 clean_question["type"] = "connect"
                 for n in range(1, 11):
                     if question[f"ans{n}"] == "":
@@ -111,7 +119,10 @@ class Loader():
             user_data[user_id][section] = []
 
         seen = user_data[user_id][section]
-        questions = self.load_questions_file()[section]
+        questions = self.load_questions_file()
+        if section not in questions:
+            questions[section] = []
+        questions = questions[section]
         if len(seen) == len(questions):
             self.load_questions_api(section)
         questions = self.load_questions_file()[section]
@@ -128,4 +139,4 @@ class Loader():
 
 if __name__ == "__main__":
     loader = Loader()
-    print(loader.random_question("879805663", "history"))
+    print(loader.load_questions_api("history"))
