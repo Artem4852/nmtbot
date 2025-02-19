@@ -1,4 +1,5 @@
-import json, re
+import json, re, os
+from PIL import Image
 
 letters = ["А", "Б", "В", "Г", "Ґ", "Д", "Е", "Є", "Ж", "З"]
 letters_uk_en = {
@@ -34,7 +35,7 @@ subjects_uk_en = {
     "хімія": "chemistry",
     "біологія": "biology",
     "географія": "geography",
-    "українська_література": "ukrainian_literature",
+    "українська_література": "ukrainianliterature",
     "англійська": "english",
     "історія_україни": "history",
 }
@@ -67,3 +68,23 @@ def fix_text(text):
     text = re.sub(r"\r\n\r\n", "\r\n", text)
     text = re.sub(r"\r\n", "\n", text)
     return text
+
+def merge_images(paths):
+    images = [Image.open(path) for path in paths]
+    widths, heights = zip(*(i.size for i in images))
+
+    total_width = sum(widths)
+    max_height = max(heights)
+
+    new_image = Image.new("RGB", (total_width, max_height))
+
+    x_offset = 0
+    for image in images:
+        new_image.paste(image, (x_offset, 0))
+        x_offset += image.width
+
+    os.makedirs("temp", exist_ok=True)
+    filename = f"temp/merged_image_{paths[0].split('/')[-1]}.jpg"
+    new_image.save(filename)
+
+    return filename
